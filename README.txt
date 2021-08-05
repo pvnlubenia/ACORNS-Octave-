@@ -24,14 +24,13 @@ acr uses the following functions:     1. extend_basis
           - INPUTS:
                     - SF_pair1: reaction number of the first reaction in a Shinar-Feinberg pair
                     - SF_pair2: reaction number of the second reaction in a Shinar-Feinberg pair
-                    - R: Matrix of reaction vectors of the CRN
-                    - basis: Basis for R
-                    - basis_reaction_num: Reaction numbers of the reaction vectors that form the basis for R     2. R_in_span_union
+                    - R: matrix of reaction vectors of the CRN
+                    - basis: basis for R
+                    - basis_reaction_num: reaction numbers of the reaction vectors that form the basis for R     2. R_in_span_union
           - OUTPUT: Returns a value of 1 for the variable 'binary_decomp' if R is in the union of span(B1) and span(B2), i.e., an independent binary decomposition of R is formed. The output variables 'span_B1' and 'span_B2' allows the user to view the elements (reaction numbers) in span(B1) and span(B2), respectively.
           - INPUTS:
-                    - R: a matrix of reaction vectors of a chemical reaction network
                     - B1: an array of the reaction numbers of a Shinar-Feinberg pair
-                    - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R     3. deficiency_N1
+                    - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R                    - R: a matrix of reaction vectors of a chemical reaction network     3. deficiency_N1
           - OUTPUT: Creates a network out of a list of reactions from another network, then returns the deficiency value of the newly-formed CRN. The output variables 'model_N1' and 'delta1' allow the user to view the following, respectively:
                        - New network formed
                        - Deficiency of the new network
