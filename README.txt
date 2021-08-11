@@ -53,11 +53,13 @@ Parts of the code come from the file model_analysis.m which is part of the ERNES
 
 
 
-====
-Note
-====
+=====
+Notes
+=====
 
-Make sure all 7 functions and the folders @multigraph and @umultigraph are in the same folder/path being used as the current working directory.
+     1. Make sure all 7 functions and the folders @multigraph and @umultigraph are in the same folder/path being used as the current working directory.
+
+     2. acr_v2 is the same as acr but returns each species with absolute concentration robustness in a chemical reaction network (CRN), as they are found, if they exist. The time elapsed is also shown per species shown and theend of the running time. This is perfect for networks with high rank and a lot of Shinar-Feinberg pairs. An alphabetical list of the species is also returned at the end. If no species is found or the network is not of Shinar-Feinberg type, a message appears saying so.
 
 
 
