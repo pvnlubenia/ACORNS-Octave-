@@ -10,7 +10,7 @@ GNU Octave (https://www.gnu.org/software/octave/index) was used to develop the f
 
 =========
 Functions
-=========The function acr returns a list of species with absolute concentration robustness in a chemical reaction network (CRN), if they exist. If no such species is found or the network is not of Shinar-Feinberg type, a message appears saying so. The output variables 'model', 'R', 'F', and 'ACR_species' allow the user to view the following, respectively:
+=========The function acr returns a list of species (and the Shinar-Feinberg pair associated with them) with absolute concentration robustness in a chemical reaction network (CRN) of Shinar-Feinberg type, if they exist. If no such species is found or the network is not of Shinar-Feinberg type, a message appears saying so. The output variables 'model', 'R', 'F', and 'ACR_species' allow the user to view the following, respectively:
 
    - Complete network with all the species listed in the 'species' field of the structure 'model'
    - Matrix of reaction vectors of the network
@@ -30,7 +30,7 @@ acr uses the following functions:     1. extend_basis
           - OUTPUT: Returns a value of 1 for the variable 'binary_decomp' if R is in the union of span(B1) and span(B2), i.e., an independent binary decomposition of R is formed. The output variables 'span_B1' and 'span_B2' allows the user to view the elements (reaction numbers) in span(B1) and span(B2), respectively.
           - INPUTS:
                     - B1: an array of the reaction numbers of a Shinar-Feinberg pair
-                    - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R                    - R: a matrix of reaction vectors of a chemical reaction network     3. deficiency_N1
+                    - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R                    - R: a matrix of reaction vectors of a CRN     3. deficiency_N1
           - OUTPUT: Creates a network out of a list of reactions from another network, then returns the deficiency value of the newly-formed CRN. The output variables 'model_N1' and 'delta1' allow the user to view the following, respectively:
                        - New network formed
                        - Deficiency of the new network
@@ -49,7 +49,7 @@ acr uses the following functions:     1. extend_basis
           - OUTPUT: Returns a value of 1 if the power law kinetic system which has non-reactant-determined kinetics (PL-NDK) is minimally PL-NDK, 0 otherwise.
           - INPUT:  model: a structure representing the CRN (see details below; it is assumed that the CRN has power law kinetics)
 
-Parts of the code come from the file model_analysis.m which is part of the ERNEST toolbox for chemical chemical reaction network theory [6]. The computation of the number of linkage classes and strong linkage classes also utilizes functions from the same toolbox, specifically in the folders @multigraph and @umultigraph. These can all be downloaded from https://www.sissa.it/fa/altafini/papers/SoAl09/.
+Parts of the code come from the file model_analysis.m which is part of the ERNEST toolbox for CRN theory [6]. The computation of the number of linkage classes and strong linkage classes also utilizes functions from the same toolbox, specifically in the folders @multigraph and @umultigraph. These can all be downloaded from https://www.sissa.it/fa/altafini/papers/SoAl09/.
 
 
 
@@ -59,7 +59,7 @@ Notes
 
      1. Make sure all 7 functions and the folders @multigraph and @umultigraph are in the same folder/path being used as the current working directory.
 
-     2. acr_v2 is the same as acr but returns each species with absolute concentration robustness in a chemical reaction network (CRN), as they are found, if they exist. The time elapsed is also shown per species shown and theend of the running time. This is perfect for networks with high rank and a lot of Shinar-Feinberg pairs. An alphabetical list of the species is also returned at the end. If no species is found or the network is not of Shinar-Feinberg type, a message appears saying so.
+     2. acr_v2 is the same as acr but returns each species (and the Shinar-Feinberg pair associated with it) with absolute concentration robustness as they are found, if they exist. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of Shinar-Feinberg pairs. An alphabetical list of the species is also returned at the end. If no species is found or the network is not of Shinar-Feinberg type, a message appears saying so.
 
 
 
