@@ -7,8 +7,8 @@
 #            associated with them) with absolute concentration robustness     #
 #            (ACR) in a chemical reaction network (CRN), if they exist. Once  #
 #            ACR in a species is found, other SF-pairs associated with the    #
-#            species is skipped. If no species is found or the network is not #
-#            of SF-type, a message appears saying so.                         #
+#            species are skipped. If no species is found or the network is    #
+#            not of SF-type, a message appears saying so.                     #
 #         The output variables 'model', 'R', 'F', and 'ACR_species' allow the #
 #            user to view the following, respectively:                        #
 #               - Complete network with all the species listed in the         #
@@ -54,7 +54,7 @@
 #           1. It is assumed that the CRN has a positive equilibrium.         #
 #           2. It is also assumed that the CRN has power law kinetics.        #
 #           3. The CRN should have at least 2 species and 2 reactions         #
-#                 (to form a SF-pair).                                        #
+#                 (to form an SF-pair).                                       #
 #           4. Notes 2 and 3 imply that we assume the CRN is a power law      #
 #                 kinetic system of SF-type.                                  #
 #                                                                             #
@@ -68,7 +68,7 @@
 #          2853–2854. doi:10.1093/bioinformatics/btp513.                      #
 #                                                                             #
 # Created: 22 July 2021                                                       #
-# Last Modified: 4 September 2021                                             #
+# Last Modified: 5 September 2021                                             #
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 

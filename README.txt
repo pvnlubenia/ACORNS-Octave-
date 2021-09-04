@@ -10,7 +10,7 @@ GNU Octave (https://www.gnu.org/software/octave/index) was used to develop the f
 
 =========
 Functions
-=========The function acr returns a list of species (and the Shinar-Feinberg (SF) pair associated with them) with absolute concentration robustness (ACR) in a chemical reaction network (CRN), if they exist. Once ACR in a species is found, other SF-pairs associated with the species is skipped. If no species is found or the network is not of SF-type, a message appears saying so.
+=========The function acr returns a list of species (and the Shinar-Feinberg (SF) pair associated with them) with absolute concentration robustness (ACR) in a chemical reaction network (CRN), if they exist. Once ACR in a species is found, other SF-pairs associated with the species are skipped. If no species is found or the network is not of SF-type, a message appears saying so.
 
 The output variables 'model', 'R', 'F', and 'ACR_species' allow the user to view the following, respectively:
 
@@ -24,14 +24,14 @@ acr uses the following functions:     1. extend_basis
                        - B1 containing the SF-pair of reactions (or one of the two reactions, if the pair is linearly dependent) that needed to be extended to a basis for the reaction vectors
                        - B2 containing the basis vectors added to B1
           - INPUTS:
-                    - SF_pair1: reaction number of the first reaction in a SF-pair
-                    - SF_pair2: reaction number of the second reaction in a SF-pair
+                    - SF_pair1: reaction number of the first reaction in an SF-pair
+                    - SF_pair2: reaction number of the second reaction in an SF-pair
                     - R: matrix of reaction vectors of the CRN
                     - basis: basis for R
                     - basis_reaction_num: reaction numbers of the reaction vectors that form the basis for R     2. R_in_span_union
           - OUTPUT: Returns a value of 1 for the variable 'binary_decomp' if R is in the union of span(B1) and span(B2), i.e., an independent binary decomposition of R is formed. The output variables 'span_B1' and 'span_B2' allows the user to view the elements (reaction numbers) in span(B1) and span(B2), respectively.
           - INPUTS:
-                    - B1: an array of the reaction numbers of a SF-pair
+                    - B1: an array of the reaction numbers of an SF-pair
                     - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R                    - R: a matrix of reaction vectors of a CRN     3. deficiency_N1
           - OUTPUT: Creates a network out of a list of reactions from another network, then returns the deficiency value of the newly-formed CRN. The output variables 'model_N1' and 'delta1' allow the user to view the following, respectively:
                        - New network formed
@@ -61,7 +61,7 @@ Notes
 
      1. Make sure all 7 functions and the folders @multigraph and @umultigraph are in the same folder/path being used as the current working directory.
 
-     2. acr_v2 is the same as acr but returns each species (and the SF-pair associated with it) with ACR as they are found, if they exist. Once ACR in a species is found, other SF-pairs associated with the species is skipped. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of SF-pairs. An alphabetical list of the species is also returned at the end.
+     2. acr_v2 is the same as acr but returns each species (and the SF-pair associated with it) with ACR as they are found, if they exist. Once ACR in a species is found, other SF-pairs associated with the species are skipped. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of SF-pairs. An alphabetical list of the species is also returned at the end.
 
      3. acr_v3 is the same as acr but ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair.
 
@@ -94,7 +94,7 @@ Note that for the function acr:
 
      1. It is assumed that the CRN has a positive equilibrium.
      2. It is also assumed that the CRN has power law kinetics.
-     3. The CRN should have at least 2 species and 2 reactions (to form a SF-pair).
+     3. The CRN should have at least 2 species and 2 reactions (to form an SF-pair).
      4. Notes 2 and 3 imply that we assume the CRN is a power law kinetic system of SF-type.
 
 
