@@ -61,11 +61,11 @@ Notes
 
      1. Make sure all 7 functions and the folders @multigraph and @umultigraph are in the same folder/path being used as the current working directory.
 
-     2. acr_v2 is the same as acr but returns each species (and the SF-pair associated with it) with ACR as they are found, if they exist. Once ACR in a species is found, other SF-pairs associated with the species are skipped. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of SF-pairs. An alphabetical list of the species is also returned at the end.
+     2. acr2 is the same as acr but returns each species (and the SF-pair associated with it) with ACR as they are found, if they exist. Once ACR in a species is found, other SF-pairs associated with the species are skipped. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of SF-pairs. An alphabetical list of the species is also returned at the end.
 
-     3. acr_v3 is the same as acr but ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair.
+     3. acr3 is the same as acr but ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair.
 
-     4. acr_v4 is the same as acr_v2 but ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair.
+     4. acr4 is the same as acr2 but ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair.
 
 
 
