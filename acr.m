@@ -57,18 +57,23 @@
 #                 (to form an SF-pair).                                       #
 #           4. Notes 2 and 3 imply that we assume the CRN is a power law      #
 #                 kinetic system of SF-type.                                  #
+#           5. This code is based largely on [1] with modifications based on  #
+#                 the ERRATUM explained in [2].                               #
 #                                                                             #
 # References:                                                                 #
-#   [1] Fontanil, L.L., Mendoza, E.R., and Fortun, N.T. (2020). A             #
+#   [1] Fontanil, L.L., Mendoza, E.R., and Fortun, N.T. (2021). A             #
 #          computational approach to concentration robustness in power law    #
-#          kinetic systems of Shinar-Feinberg type. arXiv:2011.02866          #
-#          [physics.chem-ph].                                                 #
-#   [2] Soranzo, N. and Altafini, C. (2009). ERNEST: a toolbox for chemical   #
+#          kinetic systems of Shinar-Feinberg type. MATCH Communications in   #
+#          Mathematical and in Computer Chemistry, 86, 489-516.               #
+#   [2] Lao, A.R., Lubenia, P.V.N., Magpantay, D.M., and Mendoza, E.R.        #
+#          (2021). Concentration robustness in LP kinetic systems (in         #
+#          preparation).                                                      #
+#   [3] Soranzo, N. and Altafini, C. (2009). ERNEST: a toolbox for chemical   #
 #          chemical reaction network theory. Bioinformatics, 25(21),          #
 #          2853–2854. doi:10.1093/bioinformatics/btp513.                      #
 #                                                                             #
 # Created: 22 July 2021                                                       #
-# Last Modified: 5 September 2021                                             #
+# Last Modified: 21 October 2021                                              #
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -100,7 +105,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 1: Form stoichiometric matrix N (based on [2])
+    % STEP 1: Form stoichiometric matrix N (based on [3])
     %
     
     % Count the number of species
@@ -213,7 +218,51 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 4: Get all Shinar-Feinberg pairs
+    % STEP 4: Determine the linkage class where each complex/reaction belongs to
+    %
+    
+    % Get just the unique complexes
+    % ind2(i) is the index in Y of the reactant complex in reaction i
+    % ind(i+r) is the index in Y of the product complex in reaction i     
+    [Y, ind, ind2] = unique([reactant_complexes product_complexes]', 'rows');
+    
+    % Construct the matrix of complexes
+    Y = Y';
+    
+    % Count the number of complexes
+    n = size(Y, 2);
+    
+    % Initialize an undirected graph G
+    G = init_graph();
+
+    % Add vertices to G: these are the complexes
+    % Note: Ci corresponds to Y(:,i)
+    for i = 1:n
+        
+        % Use the complex number as label for each vertex
+        G = add_vertex(G, strcat('C', num2str(i)));
+    end
+    
+    % Add edges to graph G: Ci -> Cj forms an edge
+    for i = 1:r
+        G = add_edge(G, strcat('C', num2str([~, loc] = ismember(reactant_complexes(:,i)', Y', 'rows'))), strcat('C', num2str([~,loc] = ismember(product_complexes(:,i)', Y', 'rows'))));
+    end
+    
+    % Determine to which linkage class (i.e., component) each complex belongs to
+    linkage_class = vertex_component(G);
+    
+    % Initialize list of linkage class for each reaction
+    reaction_linkage_class = [ ];
+    
+    % Label each reaction (based on its reactant complex) to which linkage class it belongs to
+    for i = 1:r
+        reaction_linkage_class(end+1) = linkage_class([~, loc] = ismember(reactant_complexes(:,i)', Y', 'rows'));
+    end
+    
+    
+    
+    %
+    % STEP 5: Get all Shinar-Feinberg pairs
     %
     
     % Initialize list of Shinar-Feinberg pairs
@@ -270,7 +319,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 5: Form a basis for the rowspace of R
+    % STEP 6: Form a basis for the rowspace of R
     %
     
     % Write R in reduced row echelon form: the transpose of R is used so 'basis_reaction_num' will give the pivot rows of R
@@ -284,7 +333,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 5.5: Initialize list of species with absolute concentration robustness (ACR)
+    % STEP 7: Initialize list of species with absolute concentration robustness (ACR)
     %
     
     % Initialize checker of species with ACR (for the loop below)
@@ -296,7 +345,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 6: Get a Shinar-Feinberg pair
+    % STEP 8: Get a Shinar-Feinberg pair
     %
     
     % Go through each Shinar-Feinberg pair
@@ -315,7 +364,7 @@ function [model, R, F, ACR_species] = acr(model)
         
         
     %
-    % STEP 7: Extend the pair to a basis for the rowspace of R
+    % STEP 9: Extend the pair to a basis for the rowspace of R
     %
         
         % Get sets 'B1' and 'B2' from the basis formed
@@ -324,7 +373,7 @@ function [model, R, F, ACR_species] = acr(model)
         
         
     %
-    % STEP 8: Check if R is in the union of span(B1) and span(B2)
+    % STEP 10: Check if R is in the union of span(B1) and span(B2)
     %
         
         % Form 'span_B1' and 'span_B2'
@@ -348,7 +397,7 @@ function [model, R, F, ACR_species] = acr(model)
             
             
     %
-    % STEP 9: Transfer some elements of B2 to B1 until an independent binary decomposition is found
+    % STEP 11: Transfer some elements of B2 to B1 until an independent binary decomposition is found
     %
             
             % Go through each set in the power set
@@ -371,7 +420,7 @@ function [model, R, F, ACR_species] = acr(model)
                         
                         
     %
-    % STEP 10: Get the deficiency of the network induced by span(B1)
+    % STEP 12: Get the deficiency of the network induced by span(B1)
     %
                         
                         % Create network N1 'model_N1' from span(B1) and compute its deficiency 'delta1'
@@ -380,49 +429,29 @@ function [model, R, F, ACR_species] = acr(model)
                         
                         
     %
-    % STEP 11: Repeat from STEP 9 until the deficiency of the network induced by span(B1) is less than or equal to 1
+    % STEP 13: Repeat from STEP 10 until the deficiency of the network induced by span(B1) is less than or equal to 1
     %
                         
-                        % Once the deficiency is less than or equal to 1
-                        if le(delta1, 1)
+                        % Case 1: The deficiency is 0
+                        if delta1 == 0
                             
                             
                             
     %
-    % STEP 12: Check if the induced network is a power law with reactant-determined kinetics (PL-RDK)
+    % STEP 14: For deficiency 0, check if the induced network is a power law with reactant-determined kinetics (PL-RDK) system with the SF-pair in a linkage class
     %
                             
                             is_RDK = is_PL_RDK(model_N1);
-                            
-                            % Case 1: 'model_N1' is PL-RDK
                             if is_RDK
                                 
-                                % Add the species associated with the Shinar-Feinberg pair to the checker
-                                ACR_checker(end+1) = SF_pair(i, 3);
+                                % Initialize checker
+                                SF_pair_same_linkage_class = [ ];
                                 
-                                % Add the species with its associated Shinar-Feinberg pair to the list 'ACR_species'
-                                ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
+                                % Check if each reaction in the SF-pair belongs to the same linkage class
+                                SF_pair_same_linkage_class = reaction_linkage_class(SF_pair1) == reaction_linkage_class(SF_pair2);
                                 
-                                % This is created so we can exit the iterated loops
-                                flag = 1;
-                                
-                                % This breaks out of the loop for k
-                                break
-                            
-                            % Case 2: 'model_N1' is NOT PL-RDK, i.e., PL-NDK
-                            else
-                                
-                                
-                                
-    %
-    % STEP 13: Check if the induced network is minimally PL-NDK
-    %
-                                
-                                % Check if 'model_N1' is minimally PL-NDK
-                                is_min_NDK = is_min_PL_NDK(model_N1);
-                                
-                                % We only get ACR in a species if the network also has deficiency 0
-                                if is_min_NDK && delta1 == 0
+                                % If the SF-pair is in the same linkage class
+                                if SF_pair_same_linkage_class == 1
                                     
                                     % Add the species associated with the Shinar-Feinberg pair to the checker
                                     ACR_checker(end+1) = SF_pair(i, 3);
@@ -436,6 +465,31 @@ function [model, R, F, ACR_species] = acr(model)
                                     % This breaks out of the loop for k
                                     break
                                 end
+                            end
+                        
+                        % Case 2: The deficiency is 1
+                        elseif delta1 == 1
+                             
+                          
+                          
+    %
+    % STEP 15: For deficiency 1, check if the induced network is a PL-RDK system (NO NEED for the condition that the SF-pair is in a linkage class)
+    %
+    
+                            is_RDK = is_PL_RDK(model_N1);
+                            if is_RDK
+                                
+                                % Add the species associated with the Shinar-Feinberg pair to the checker
+                                ACR_checker(end+1) = SF_pair(i, 3);
+                                
+                                % Add the species with its associated Shinar-Feinberg pair to the list 'ACR_species'
+                                ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
+                                
+                                % This is created so we can exit the iterated loops
+                                flag = 1;
+                                
+                                % This breaks out of the loop for k
+                                break
                             end
                         end
                     end
@@ -452,38 +506,45 @@ function [model, R, F, ACR_species] = acr(model)
                 end
             end
       
-        % Case 2: R is in the union of span(B1) and span(B2)
-        % We jump to STEP 10 and continue up to STEP 13
+        % Case 2: R is the union of span(B1) and span(B2)
+        % We jump to STEP 12 and continue up to STEP 15
         else
             
-            % STEP 10
+            % STEP 12
             [model_N1, delta1] = deficiency_N1(model, span_B1);
             
-            % Case 1: The deficiency is less than or equal to 1
-            % STEP 11
-            if le(delta1, 1)
+            % STEP 13
+            % Case 1: The deficiency is 0
+            if delta1 == 0
                 
-                % STEP 12
+                % STEP 14
                 is_RDK = is_PL_RDK(model_N1);
                 if is_RDK
-                    ACR_checker(end+1) = SF_pair(i, 3);
-                    ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
-                    % No break here since we don't want to exit checking the other pairs
-                else
-                    % STEP 13
-                    is_min_NDK = is_min_PL_NDK(model_N1);
-                    if is_min_NDK && delta1 == 0
+                    SF_pair_same_linkage_class = [ ];
+                    SF_pair_same_linkage_class = reaction_linkage_class(SF_pair1) == reaction_linkage_class(SF_pair2);
+                    if SF_pair_same_linkage_class == 1
                         ACR_checker(end+1) = SF_pair(i, 3);
                         ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
                         % No break here since we don't want to exit checking the other pairs
                     end
                 end
+
+            % Case 2: The deficiency is 1
+            elseif delta1 == 1
             
-            % Case 2: The deficiency is greater than 1
+                % STEP 15
+                is_RDK = is_PL_RDK(model_N1);
+                if is_RDK
+                    ACR_checker(end+1) = SF_pair(i, 3);
+                    ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
+                    % No break here since we don't want to exit checking the other pairs
+                end
+
+            % Case 3: The deficiency is greater than 1
             else
                 
-                % NOTE: This repeats STEPS 9-13 where we go through each set in the power set until we get a subnetwork with deficiency less than or equal to 1
-                % STEP 9
+                % NOTE: This repeats STEPS 11-15 where we go through each set in the power set until we get a subnetwork with deficiency less than or equal to 1
+                % STEP 11
                 for j = 1:numel(power_set_B2)
                     for k = 1:size(power_set_B2{j}, 1)
                         B1_new = [B1 power_set_B2{j}(k, :)];
@@ -492,28 +553,33 @@ function [model, R, F, ACR_species] = acr(model)
                         [binary_decomp, span_B1, span_B2] = R_in_span_union(B1_new, B2_new, R);
                         if binary_decomp == 1
                             
-                            % STEP 10
+                            % STEP 12
                             [model_N1, delta1] = deficiency_N1(model, span_B1);
                             
-                            % STEP 11
-                            if le(delta1, 1)
+                            % STEP 13
+                            if delta1 == 0
                                 
-                                % STEP 12
+                                % STEP 14
+                                is_RDK = is_PL_RDK(model_N1);
+                                if is_RDK
+                                    SF_pair_same_linkage_class = [ ];
+                                    SF_pair_same_linkage_class = reaction_linkage_class(SF_pair1) == reaction_linkage_class(SF_pair2);
+                                    if SF_pair_same_linkage_class == 1
+                                        ACR_checker(end+1) = SF_pair(i, 3);
+                                        ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
+                                        flag = 1;
+                                        break
+                                    end
+                                end
+                            elseif delta1 == 1
+                                
+                                % STEP 15
                                 is_RDK = is_PL_RDK(model_N1);
                                 if is_RDK
                                     ACR_checker(end+1) = SF_pair(i, 3);
                                     ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
                                     flag = 1;
                                     break
-                                else
-                                    % STEP 13
-                                    is_min_NDK = is_min_PL_NDK(model_N1);
-                                    if is_min_NDK && delta1 == 0
-                                        ACR_checker(end+1) = SF_pair(i, 3);
-                                        ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i,1)), ', R' num2str(SF_pair(i,2)), ')]'];
-                                        flag = 1;
-                                        break
-                                    end
                                 end
                             end
                         end
@@ -533,7 +599,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 14: Display the results
+    % STEP 16: Display the results
     %
     
     % Case 1: No ACR in any species
