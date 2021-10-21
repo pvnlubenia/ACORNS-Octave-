@@ -160,6 +160,6 @@ References
 
    [5] Lao, A.R., Lubenia, P.V.N., Magpantay, D.M., and Mendoza, E.R. (2021). Concentration robustness in LP kinetic systems (in preparation).
 
-   [6] Meshkat, N., Shiu, A., and Torres, A. (2021). Absolute concentration robustness in networks with low-dimensional stoichiometric subspace. Vietnam Journal of Mathematics. https://doi.org/10.1007/s10013-021-00524-5.
+   [6] Meshkat, N., Shiu, A., and Torres, A. (2021). Absolute concentration robustness in networks with low-dimensional stoichiometric subspace. Vietnam Journal of Mathematics. doi:10.1007/s10013-021-00524-5.
 
    [7] Soranzo, N. and Altafini, C. (2009). ERNEST: a toolbox for chemical reaction network theory. Bioinformatics, 25(21), 2853Ð2854. doi:10.1093/bioinformatics/btp513.
