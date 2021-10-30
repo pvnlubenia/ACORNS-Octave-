@@ -10,7 +10,7 @@ GNU Octave (https://www.gnu.org/software/octave/index) was used to develop the f
 
 =========
 Functions
-=========The function acr returns a list of species (and the Shinar-Feinberg (SF) pair associated with them) with absolute concentration robustness (ACR) in a chemical reaction network (CRN), if they exist. ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair. If no species is found or the network is not of SF-type, a message appears saying so.
+=========The function acr returns a list of species (together with the Shinar-Feinberg (SF) pair associated with each and the deficiency of the building block subnetwork containing the SF-pair) with absolute concentration robustness (ACR) in a chemical reaction network (CRN), if they exist. ACR in a species is checked for each SF-pair even if the species is already determined to have ACR considering a different SF-pair. If no species is found or the network is not of SF-type, a message appears saying so.
 
 The output variables 'model', 'R', 'F', and 'ACR_species' allow the user to view the following, respectively:
 
@@ -23,30 +23,26 @@ acr uses the following functions:     1. add_edge
           - OUTPUT: Adds an undirected edge between two vertices. The vertex connected to a vertex is indicated in the subfield 'vertex' and the label for the edge is in the subfield 'label'. Both subfields are under the field 'edges' corresponding to the vertex. The field and subfields belong to the structure representing the graph.
           - INPUTS:
                     - g: a structure with fields 'vertices' and 'edges'
-                    - v1, v2: strings representing the vertices connected by an undirected edge (make sure 'add_vertex' has been used to add the vertices 'v1' and 'v2' to g)
+                    - v1, v2: strings representing the vertices connected by an undirected edge (make sure add_vertex has been used to add the vertices v1 and v2 to g)
 
      2. add_path
           - OUTPUT: Adds a directed edge from one vertex to another. The vertices are indicated in the subfield 'vertex' and the label for the edge is in the subfield 'label'. Both subfields are under the field 'edges' corresponding to the vertex. The field and subfields belong to the structure representing the graph.
           - INPUTS:
                     - g: a structure with fields 'vertices' and 'edges'
-                    - v1, v2: strings representing the vertices connected by a directed edge (make sure 'add_vertex' has been used to add the vertices 'v1' and 'v2' to g)
+                    - v1, v2: strings representing the vertices connected by a directed edge (make sure add_vertex has been used to add the vertices v1 and v2 to g)
 
      3. add_vertex
           - OUTPUT: Adds a vertex to a graph. This is indicated in the 'vertices' field of the structure representing the graph.
           - INPUTS:
                     - g: a structure with fields 'vertices' and 'edges'
-                    - v: a string representing the vertex     4. deficiency_N1
-          - OUTPUT: Creates a network out of a list of reactions from another network, then returns the deficiency value of the newly-formed CRN. The output variables 'model_N1' and 'delta1' allow the user to view the following, respectively:
+                    - v: a string representing the vertex     4. deficiency
+          - OUTPUT: Creates a network out of a list of reactions from another network, then returns the deficiency value of the newly-formed CRN. The output variables model_N1 and delta1 allow the user to view the following, respectively:
                        - New network formed
                        - Deficiency of the new network
           - INPUTS:
                     - model: a structure representing the CRN (see details below)
-                    - span_B1: list of reaction numbers of 'model' that will be used to form 'model_N1'
-
-     5. deficiency
-          - OUTPUT: Returns the deficiency value of a CRN through the variable 'delta'.
-          - INPUT: model: a structure representing the CRN (see details below)
-     6. extend_basis
+                    - span_B1: list of reaction numbers of 'model' that will be used to form model_N1
+     5. extend_basis
           - OUTPUT: Basis for the reaction vectors of a CRN separated into 2 sets:
                        - B1 containing the SF-pair of reactions (or one of the two reactions, if the pair is linearly dependent) that needed to be extended to a basis for the reaction vectors
                        - B2 containing the basis vectors added to B1
@@ -55,28 +51,30 @@ acr uses the following functions:     1. add_edge
                     - SF_pair2: reaction number of the second reaction in an SF-pair
                     - R: matrix of reaction vectors of the CRN
                     - basis: basis for R
-                    - basis_reaction_num: reaction numbers of the reaction vectors that form the basis for R     7. init_graph
+                    - basis_reaction_num: reaction numbers of the reaction vectors that form the basis for R     6. in_same_linkage_class
+          - OUTPUT: Returns a value of 1 if the complexes are in the same linkage class in 'model', 0 otherwise.
+          - INPUTS:
+                    - model: a structure representing the CRN (see details below; it is assumed that the field 'species' have already been filled out by another function)
+                    - complex1, complex2: strings representing the complexes we want to check
+     7. init_graph
           - OUTPUT: Creates an empty structure that represents a graph. The structure has the following fields: 'vertices' and 'edges'.
-          - INPUT: none     8. is_PL_RDK
-          - OUTPUT: Returns a value of 1 if the power law kinetic system has reactant-determined kinetics (PL-RDK), 0 otherwise.
-          - INPUT:  model: a structure representing the CRN (see details below; it is assumed that the CRN has power law kinetics)
+          - INPUT: none     8. is_nonterminal
+          - OUTPUT: Returns a value of 1 if the complex is nonterminal in 'model', 0 otherwise.
+          - INPUTS:
+                    - model: a structure representing the CRN (see details below; it is assumed that the field 'species' have already been filled out by another function)
+                    - check_complex: string representing the complex we want to check     9. is_PL_RDK
+          - OUTPUT: Returns a value of 1 if the power law system has reactant-determined kinetics (PL-RDK), 0 otherwise.
+          - INPUT:  model: a structure representing the CRN (see details below; it is assumed that the CRN has power law kinetics and that the field 'species' have already been filled out by another function)
 
-     9. is_weakly_reversible
+     10. is_weakly_reversible
           - OUTPUT: Returns a value of 1 if the network is weakly reversible, 0 otherwise.
-          - INPUT:  model: a structure representing the CRN (see details below)
+          - INPUT:  model: a structure representing the CRN (see details below; it is assumed that the field 'species' have already been filled out by another function)
 
-     10. linkage_class
-          - OUTPUT: Returns a vector whose entries are the linkage class numbers where each vertex (representing a complex) of an undirected graph belongs to. The function returns an empty value if there are no vertices in the graph.
-          - INPUT: g: a structure with fields 'vertices' and 'edges'
-
-     11. R_in_span_union
-          - OUTPUT: Returns a value of 1 for the variable 'binary_decomp' if R is in the union of span(B1) and span(B2), i.e., an independent binary decomposition of R is formed. The output variables 'span_B1' and 'span_B2' allows the user to view the elements (reaction numbers) in span(B1) and span(B2), respectively.
+     11. R_is_span_union
+          - OUTPUT: Returns a value of 1 for the variable binary_decomp if R is in the union of span(B1) and span(B2), i.e., an independent binary decomposition of R is formed. The output variables span_B1 and span_B2 allows the user to view the elements (reaction numbers) in span(B1) and span(B2), respectively.
           - INPUTS:
                     - B1: an array of the reaction numbers of an SF-pair
-                    - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R                    - R: a matrix of reaction vectors of a CRN     12. strong_linkage_class          - OUTPUT: Returns a vector whose entries are the strong linkage class numbers where each vertex (representing a complex) of a directed graph belongs to. The function returns an empty value if there are no vertices in the graph.
-          - INPUT: g: a structure with fields 'vertices' and 'edges'
-
-Parts of the code come from the file model_analysis.m which is part of the ERNEST toolbox for CRN theory [7]. The computation of the number of linkage classes and strong linkage classes also utilizes functions from the same toolbox, specifically in the folders @multigraph and @umultigraph. These can all be downloaded from https://www.sissa.it/fa/altafini/papers/SoAl09/.
+                    - B2: an array of the reaction numbers of the vectors added to extend B1 to a basis for R                    - R: a matrix of reaction vectors of a CRN
 
 
 
@@ -84,9 +82,9 @@ Parts of the code come from the file model_analysis.m which is part of the ERNES
 Notes
 =====
 
-     1. Make sure all 12 functions and the folders @multigraph and @umultigraph are in the same folder/path being used as the current working directory.
+     1. Make sure all 11 functions are in the same folder/path being used as the current working directory.
 
-     2. acr2 is the same as acr but returns each species (and the SF-pair associated with it) with ACR as they are found, if they exist. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of SF-pairs. An alphabetical list of the species is also returned at the end.
+     2. acr2 is the same as acr but returns each species (together with the SF-pair associated with it and the deficiency of the building block block subnetwork containing the SF-pair) with ACR as they are found, if they exist. The time elapsed is also shown per species found and the end of the running time. This is perfect for networks with high rank and a lot of SF-pairs. An alphabetical list of the species is also returned at the end.
 
 
 
@@ -116,7 +114,7 @@ Note that for the functions acr and acr2:
      1. It is assumed that the CRN has a positive equilibrium.
      2. It is also assumed that the CRN has power law kinetics.
      3. The CRN should have at least 2 species and 2 reactions (to form an SF-pair).
-     4. Notes 2 and 3 imply that we assume the CRN is a power law kinetic system of SF-type.
+     4. Notes 2 and 3 imply that we assume the CRN is a power law system of SF-type.
      5. This code is based largely on [2] with modifications based on the ERRATUM explained in [5].
 
 
@@ -152,7 +150,7 @@ Contact Information
 For questions, comments, and suggestions, feel free to contact me at pvnlubenia@yahoo.co.uk.
 
 
-- Patrick Lubenia (29 October 2021)
+- Patrick Lubenia (30 October 2021)
 
 
 

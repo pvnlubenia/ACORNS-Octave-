@@ -3,13 +3,14 @@
 #    acr                                                                      #
 #                                                                             #
 #                                                                             #
-# OUTPUT: Returns a list of species (and the Shinar-Feinberg (SF) pair        #
-#            associated with them) with absolute concentration robustness     #
-#            (ACR) in a chemical reaction network (CRN), if they exist. ACR   #
-#            in a species is checked for each SF-pair even if the species is  #
-#            already determined to have ACR considering a different SF-pair.  #
-#            If no species is found or the network is not of SF-type, a       #
-#            message appears saying so.                                       #
+# OUTPUT: Returns a list of species (together with the Shinar-Feinberg (SF)   #
+#            pair associated with each and the deficiency of the building     #
+#            block subnetwork containing the SF-pair) with absolute           #
+#            concentration robustness (ACR) in a chemical reaction network    #
+#            (CRN), if they exist. ACR in a species is checked for each       #
+#            SF-pair even if the species is already determined to have ACR    #
+#            considering a different SF-pair. If no species is found or the   #
+#            network is not of SF-type, a message appears saying so.          #
 #         The output variables 'model', 'R', 'F', and 'ACR_species' allow the #
 #            user to view the following, respectively:                        #
 #               - Complete network with all the species listed in the         #
@@ -74,7 +75,7 @@
 #          2853–2854. doi:10.1093/bioinformatics/btp513.                      #
 #                                                                             #
 # Created: 22 July 2021                                                       #
-# Last Modified: 29 October 2021                                              #
+# Last Modified: 30 October 2021                                              #
 #                                                                             #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -83,7 +84,7 @@
 function [model, R, F, ACR_species] = acr(model)
     
     %
-    % STEP 0: Add to 'model.species' all species indicated in the reactions
+    % STEP 1: Add to 'model.species' all species indicated in the reactions
     %
     
     % Get all species from reactants
@@ -106,17 +107,17 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 1: Form stoichiometric matrix N (based on [3])
+    % STEP 2: Form stoichiometric matrix N (based on [3])
     %
     
     % Count the number of species
     m = numel(model.species);
     
     % Initialize the matrix of reactant complexes
-    reactant_complexes = [ ];
+    reactant_complex = [ ];
     
     % Initialize the matrix of product complexes
-    product_complexes = [ ];
+    product_complex = [ ];
     
     % Initialize the stoichiometric matrix
     N = [ ];
@@ -125,32 +126,32 @@ function [model, R, F, ACR_species] = acr(model)
     for i = 1:numel(model.reaction)
       
         % Initialize the vector for the reaction's reactant complex
-        reactant_complexes(:, end+1) = zeros(m, 1);
+        reactant_complex(:, end+1) = zeros(m, 1);
         
         % Fill it out with the stoichiometric coefficients of the species in the reactant complex
         for j = 1:numel(model.reaction(i).reactant)
-            reactant_complexes(find(strcmp(model.reaction(i).reactant(j).species, model.species), 1), end) = model.reaction(i).reactant(j).stoichiometry;
+            reactant_complex(find(strcmp(model.reaction(i).reactant(j).species, model.species), 1), end) = model.reaction(i).reactant(j).stoichiometry;
         end
         
         % Initialize the vector for the reaction's product complex
-        product_complexes(:, end+1) = zeros(m, 1);
+        product_complex(:, end+1) = zeros(m, 1);
         
         % Fill it out with the stoichiometric coefficients of the species in the product complex
         for j = 1:numel(model.reaction(i).product)
-            product_complexes(find(strcmp(model.reaction(i).product(j).species, model.species), 1), end) = model.reaction(i).product(j).stoichiometry;
+            product_complex(find(strcmp(model.reaction(i).product(j).species, model.species), 1), end) = model.reaction(i).product(j).stoichiometry;
         end
         
         % Create a vector for the stoichiometric matrix: Difference between the two previous vectors
-        N(:, end+1) = product_complexes(:, end) - reactant_complexes(:, end);
+        N(:, end+1) = product_complex(:, end) - reactant_complex(:, end);
         
         % If the reaction is reversible
         if model.reaction(i).reversible
           
             % Insert a new vector for the reactant complex: make it same as the product complex
-            reactant_complexes(:, end+1) = product_complexes(:, end);
+            reactant_complex(:, end+1) = product_complex(:, end);
             
             % Insert a new vector for the product complex: make it the same as the reactant complex
-            product_complexes(:, end+1) = reactant_complexes(:, end-1);
+            product_complex(:, end+1) = reactant_complex(:, end-1);
             
             % Insert a new vector in the stoichiometric matrix: make it the additive inverse of the vector formed earlier
             N(:, end+1) = -N(:, end);
@@ -163,7 +164,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % Step 2: Form kinetic order matrix F
+    % Step 3: Form kinetic order matrix F
     %
     
     % Initialize matrix F
@@ -207,93 +208,14 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 3: Get the matrix of reaction vectors of the network and its rank (this point onward is based on [1])
+    % STEP 4: Get the matrix of reaction vectors of the network and its rank (this point onward is based on [1])
     %
     
     % Matrix of reaction vectors
     R = N';
     
-    % Rank of the network
+    % Determine the rank of the network
     s = rank(N);
-    
-    
-    
-    %
-    % STEP 4: Determine the linkage class where each complex/reaction belongs to
-    %
-    
-    % Get just the unique complexes
-    % ind2(i) is the index in Y of the reactant complex in reaction i
-    % ind(i+r) is the index in Y of the product complex in reaction i     
-    [Y, ind, ind2] = unique([reactant_complexes product_complexes]', 'rows');
-    
-    % Construct the matrix of complexes
-    Y = Y';
-    
-    % Count the number of complexes
-    n = size(Y, 2);
-    
-    % Initialize an undirected graph G and a directed graph G_digraph
-    G = init_graph();
-    G_digraph = init_graph();
-
-    % Go through each column of Y (a complex)
-    for i = 1:n
-        
-        % For the zero complex
-        if numel(find(Y(:, i))) == 0
-            complex = '0';
-        
-        % Otherwise
-        else
-            
-            % Check which species appear in the complex
-            for j = 1:numel(find(Y(:, i)))
-                
-                % For the first species
-                if j == 1
-                    
-                    % Don't show the stoichiometry if it's 1
-                    if Y(:, i)(find(Y(:, i))(j)) == 1
-                        complex = [model.species{find(Y(:, i))(j)}];
-                    
-                    % Otherwise, include it
-                    else
-                        complex = [num2str(Y(:, i)(find(Y(:, i))(j))), model.species{find(Y(:, i))(j)}];
-                    end
-                
-                % We need the + sign for succeeding species
-                else
-                    if Y(:, i)(find(Y(:, i))(j)) == 1
-                        complex = [complex, '+', model.species{find(Y(:, i))(j)}];
-                    else
-                        complex = [complex, '+', num2str(Y(:, i)(find(Y(:, i))(j))), model.species{find(Y(:, i))(j)}];
-                    end
-                end
-            end 
-        end
-        
-        % Add this complex in the list of vertices of G and G_digraph
-        G = add_vertex(G, complex);
-        G_digraph = add_vertex(G_digraph, complex);
-    end
-    
-    % Add edges to G (we'll do G_digraph later): Ci -> Cj forms an edge
-    % ~ suppresses the original output
-    for i = 1:r
-        G = add_edge(G, G.vertices{[~, loc] = ismember(reactant_complexes(:, i)', Y', 'rows')}, G.vertices{[~, loc] = ismember(product_complexes(:, i)', Y', 'rows')});
-    end
-    
-    % Determine to which linkage class each complex belongs to
-    link_class = linkage_class(G);
-    
-    % Initialize list of linkage class for each reaction
-    reaction_linkage_class = [ ];
-    
-    % Label each reaction (based on its reactant complex) to which linkage class it belongs to
-    for i = 1:r
-        reaction_linkage_class(end+1) = link_class([~, loc] = ismember(reactant_complexes(:, i)', Y', 'rows'));
-    end
     
     
     
@@ -301,93 +223,64 @@ function [model, R, F, ACR_species] = acr(model)
     % STEP 5: Create a list of reactant complexes
     %
     
+    % Get just the unique complexes
+    % ind2(i) is the index in Y of the reactant complex in reaction i
+    % ind(i+r) is the index in Y of the product complex in reaction i     
+    [Y, ind, ind2] = unique([reactant_complex, product_complex]', 'rows');
+    
+    % Construct the matrix of complexes
+    Y = Y';
+    
+    % Count the number of complexes
+    n = size(Y, 2);
+    
     % Initialize list of reactant complexes
-    reac_complex = { };
+    reactant_complex_list = { };
     
     % Go through each reactant complex
-    for i = 1:size(reactant_complexes, 2)
+    for i = 1:size(reactant_complex, 2)
         
         % For the zero complex
-        if numel(find(reactant_complexes(:, i))) == 0
+        if numel(find(reactant_complex(:, i))) == 0
             complex = '0';
         
         % Otherwise
         else
             
             % Check which species appear in the complex
-            for j = 1:numel(find(reactant_complexes(:, i)))
+            for j = 1:numel(find(reactant_complex(:, i)))
                 
                 % For the first species
                 if j == 1
                     
                     % Don't show the stoichiometry if it's 1
-                    if reactant_complexes(:, i)(find(reactant_complexes(:, i))(j)) == 1
-                        complex = [model.species{find(reactant_complexes(:, i))(j)}];
+                    if reactant_complex(:, i)(find(reactant_complex(:, i))(j)) == 1
+                        complex = [model.species{find(reactant_complex(:, i))(j)}];
                     
                     % Otherwise, include it
                     else
-                        complex = [num2str(reactant_complexes(:, i)(find(reactant_complexes(:, i))(j))), model.species{find(reactant_complexes(:, i))(j)}];
+                        complex = [num2str(reactant_complex(:, i)(find(reactant_complex(:, i))(j))), model.species{find(reactant_complex(:, i))(j)}];
                     end
                 
                 % We need the + sign for succeeding species
                 else
-                    if reactant_complexes(:, i)(find(reactant_complexes(:, i))(j)) == 1
-                        complex = [complex, '+', model.species{find(reactant_complexes(:, i))(j)}];
+                    if reactant_complex(:, i)(find(reactant_complex(:, i))(j)) == 1
+                        complex = [complex, '+', model.species{find(reactant_complex(:, i))(j)}];
                     else
-                        complex = [complex, '+', num2str(reactant_complexes(:, i)(find(reactant_complexes(:, i))(j))), model.species{find(reactant_complexes(:, i))(j)}];
+                        complex = [complex, '+', num2str(reactant_complex(:, i)(find(reactant_complex(:, i))(j))), model.species{find(reactant_complex(:, i))(j)}];
                     end
                 end
             end 
         end
         
         % Add the complex in the list
-        reac_complex{end+1} = complex;
+        reactant_complex_list{end+1} = complex;
     end
     
     
     
     %
-    % STEP 6: Determine the nonterminal complexes
-    %
-    
-    % Add a directed edge to digraph G_digraph: Ci -> Cj forms an edge
-    for i = 1:r
-        G_digraph = add_path(G_digraph, G_digraph.vertices{[~, loc] = ismember(reactant_complexes(:, i)', Y', 'rows')}, G_digraph.vertices{[~, loc] = ismember(product_complexes(:, i)', Y', 'rows')});
-    end
-    
-    % Label each complex to which strong linkage class it belongs to
-    strong = strong_linkage_class(G_digraph);
-    
-    % Initialize list of non-terminal strong linkage classes
-    not_terminal_strong = [ ];
-    
-    % Go through each complex
-    for i = 1:numel(G_digraph.edges)
-        
-        % Check to which complex it is connected to
-        for j = 1:numel(G_digraph.edges{i})
-            
-            % Check if the two complexes belong to the same strong linkage class
-            terminal_strong = strong(i) == strong([G_digraph.edges{i}.vertex](j));
-            
-            % If they do not, then the complex does not belong in a terminal strong linkage class
-            if terminal_strong == 0
-                not_terminal_strong(end+1) = i;
-            end
-        end
-    end
-    
-    % Generate the list of complexes that do not belong to a terminal strong linkage class
-    not_terminal_strong = unique(not_terminal_strong);
-    
-    % Locate the other complexes belonging to the same strong linkage class as the ones identified to not belong in a terminal strong linkage class
-    % These constitute the nonterminal complexes
-    nonterminal_complexes = find(ismember(strong, strong(not_terminal_strong)));
-    
-    
-    
-    %
-    % STEP 7: Get all Shinar-Feinberg pairs
+    % STEP 6: Get all Shinar-Feinberg pairs
     %
     
     % Initialize list of Shinar-Feinberg pairs
@@ -422,8 +315,8 @@ function [model, R, F, ACR_species] = acr(model)
                 % Get the index of the kinetic order that is different
                 index = find(~(nonzeros == kinetics));
                 
-                % Compile Shinar-Feinberg pairs in matrix form: reactions 'i' and 'j' form a Shinar-Feinberg pair in species 'index')
-                SF_pair(end+1, :) = [i j index];
+                % Compile Shinar-Feinberg pairs in matrix form: reactions i and j form a Shinar-Feinberg pair in species 'index')
+                SF_pair(end+1, :) = [i, j, index];
                 
                 % Get the name of the species corresponding to that kinetic order
                 species = model.species{index};
@@ -444,30 +337,25 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 8: Form a basis for the rowspace of R
+    % STEP 7: Form a basis for the rowspace of R
     %
     
-    % Write R in reduced row echelon form: the transpose of R is used so 'basis_reaction_num' will give the pivot rows of R
+    % Write R in reduced row echelon form: the transpose of R is used so basis_reac_num will give the pivot rows of R
     %    - 'A' is R in reduced row echelon form
-    %    - 'basis_reaction_num' gives the row numbers of R which form a basis for the rowspace of R
-    [A, basis_reaction_num] = rref(R');
+    %    - basis_reac_num gives the row numbers of R which form a basis for the rowspace of R
+    [A, basis_reac_num] = rref(R');
     
     % Form the basis
-    basis = R(basis_reaction_num, :);
+    basis = R(basis_reac_num, :);
     
-    
-    
-    %
-    % STEP 9: Initialize list of species with absolute concentration robustness (ACR)
-    %
-    
+    % Initialize list of species with absolute concentration robustness (ACR)
     % This also serves as a control if no independent binary decomposition is found: it will remain empty
     ACR_species = { };
     
     
     
     %
-    % STEP 10: Get a Shinar-Feinberg pair
+    % STEP 8: Get a Shinar-Feinberg pair
     %
     
     % Go through each Shinar-Feinberg pair
@@ -480,21 +368,21 @@ function [model, R, F, ACR_species] = acr(model)
         
         
     %
-    % STEP 11: Extend the pair to a basis for the rowspace of R
+    % STEP 9: Extend the pair to a basis for the rowspace of R
     %
         
-        % Get sets 'B1' and 'B2' from the basis formed
-        [B1, B2] = extend_basis(SF_pair1, SF_pair2, R, basis, basis_reaction_num);
+        % Get sets B1 and B2 from the basis formed
+        [B1, B2] = extend_basis(SF_pair1, SF_pair2, R, basis, basis_reac_num);
         
         
         
     %
-    % STEP 12: Check if R is in the union of span(B1) and span(B2)
+    % STEP 10: Check if R is the union of span(B1) and span(B2)
     %
         
-        % Form 'span_B1' and 'span_B2'
-        % 'binary_decomp' is 1 if R is in the union of span(B1) and span(B2), 0 otherwise
-        [binary_decomp, span_B1, span_B2] = R_in_span_union(B1, B2, R);
+        % Form span_B1 and span_B2
+        % binary_decomp is 1 if R is the union of span(B1) and span(B2), 0 otherwise
+        [binary_decomp, span_B1, span_B2] = R_is_span_union(B1, B2, R);
         
         % Initialize list of power sets of B2 (for use in case we don't get an independent binary decomposition)
         power_set_B2 = { };
@@ -505,7 +393,7 @@ function [model, R, F, ACR_species] = acr(model)
             power_set_B2{j} = nchoosek(B2, j);
         end
         
-        % Case 1: R is NOT in the union of span(B1) and span(B2)
+        % Case 1: R is NOT the union of span(B1) and span(B2)
         if binary_decomp == 0
             
             % NOTE: In the interest of understanding the process, I intentionally did not make the succeeding iterated loops into a function even if it will be repeated later
@@ -513,7 +401,7 @@ function [model, R, F, ACR_species] = acr(model)
             
             
     %
-    % STEP 13: Transfer some elements of B2 to B1 until an independent binary decomposition is found
+    % STEP 11: Transfer some elements of B2 to B1 until an independent binary decomposition is found
     %
             
             % Go through each set in the power set
@@ -527,8 +415,8 @@ function [model, R, F, ACR_species] = acr(model)
                     B2_new = B2;
                     B2_new(ismember(B2_new, power_set_B2{j}(k, :))) = [ ];
                     
-                    % Check if R is in the union of span(B1) and span(B2)
-                    [binary_decomp, span_B1, span_B2] = R_in_span_union(B1_new, B2_new, R);
+                    % Check if R is the union of span(B1) and span(B2)
+                    [binary_decomp, span_B1, span_B2] = R_is_span_union(B1_new, B2_new, R);
                     
                     % Once successful in getting an independent binary decomposition
                     if binary_decomp == 1
@@ -536,16 +424,16 @@ function [model, R, F, ACR_species] = acr(model)
                         
                         
     %
-    % STEP 14: Get the deficiency of the network induced by span(B1)
+    % STEP 12: Get the deficiency of the network induced by span(B1)
     %
                         
-                        % Create network N1 'model_N1' from span(B1) and compute its deficiency 'delta1'
-                        [model_N1, delta1] = deficiency_N1(model, span_B1);
+                        % Create network N1 called model_N1 from span(B1) and compute its deficiency delta1
+                        [model_N1, delta1] = deficiency(model, span_B1);
                         
                         
                         
     %
-    % STEP 15: Repeat from STEP 12 until the deficiency of the network induced by span(B1) is less than or equal to 1
+    % STEP 13: Repeat from STEP 11 until the deficiency of the network induced by span(B1) is less than or equal to 1
     %
                         
                         % Case 1: The deficiency is 0
@@ -554,27 +442,28 @@ function [model, R, F, ACR_species] = acr(model)
                             
                             
     %
-    % STEP 16: For deficiency 0, check if the induced network is a weakly reversible power law system with reactant-determined kinetics (PL-RDK) with the SF-pair in a linkage class (based on [2])
+    % STEP 14: For deficiency 0, check if the induced network is a weakly reversible power law system with reactant-determined kinetics (PL-RDK) with the Shinar-Feinberg pair in the same linkage class in the induced network (based on [2])
     %
                             
-                            is_RDK = is_PL_RDK(model_N1);
-                            if is_RDK
+                            PL_RDK = is_PL_RDK(model_N1);
+                            if PL_RDK
                                 
                                 % Check that model_N1 is weakly reversible
                                 weakly_reversible = is_weakly_reversible(model_N1);
                                 if weakly_reversible
-                                
-                                    % Initialize checker
-                                    SF_pair_same_linkage_class = [ ];
                                     
-                                    % Check if each reaction in the SF-pair belongs to the same linkage class
-                                    SF_pair_same_linkage_class = reaction_linkage_class(SF_pair1) == reaction_linkage_class(SF_pair2);
+                                    % Get the reactant complex of each reaction in the Shinar-Feinberg pair
+                                    reactant_complex1 = reactant_complex_list{SF_pair1};
+                                    reactant_complex2 = reactant_complex_list{SF_pair2};
                                     
-                                    % If the SF-pair is in the same linkage class
-                                    if SF_pair_same_linkage_class == 1
+                                    % Check if the reactant complexes are in the same linkage class in model_N1
+                                    same_linkage_class = in_same_linkage_class(model_N1, reactant_complex1, reactant_complex2);
+                                    
+                                    % If the reactant complexes are in the same linkage class
+                                    if same_linkage_class
                                         
-                                        % Add the species with its associated Shinar-Feinberg pair to the list 'ACR_species'
-                                        ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i, 1)), ', R' num2str(SF_pair(i, 2)), ')]'];
+                                        % Add the species with its associated Shinar-Feinberg pair to the list ACR_species
+                                        ACR_species{end+1} = [model.species{SF_pair(i, 3)} ' [SF-pair (R' num2str(SF_pair(i, 1)) ', R' num2str(SF_pair(i, 2)) ') | deficiency ' num2str(delta1) ']'];
                                         
                                         % This is created so we can exit the iterated loops
                                         flag = 1;
@@ -591,17 +480,21 @@ function [model, R, F, ACR_species] = acr(model)
                           
                           
     %
-    % STEP 17: For deficiency 1, check if the induced network is a PL-RDK system AND that the reactant complexes of the SF-pairs are nonterminal complexes
+    % STEP 15: For deficiency 1, check if the induced network is a PL-RDK system AND that the reactant complexes of the Shinar-Feinberg pairs are nonterminal complexes
     %
     
-                            is_RDK = is_PL_RDK(model_N1);
-                            if is_RDK
+                            PL_RDK = is_PL_RDK(model_N1);
+                            if PL_RDK
+                                
+                                % Get the reactant complex of each reaction in the Shinar-Feinberg pair
+                                reactant_complex1 = reactant_complex_list{SF_pair1};
+                                reactant_complex2 = reactant_complex_list{SF_pair2};
                                 
                                 % Check that the reactant complexes are nonterminal
-                                if (isempty(find(strcmp(G_digraph.vertices(nonterminal_complexes), reac_complex{SF_pair1}))) == 0 && isempty(find(strcmp(G_digraph.vertices(nonterminal_complexes), reac_complex{SF_pair2}))) == 0)
+                                if (is_nonterminal(model_N1, reactant_complex1) && is_nonterminal(model_N1, reactant_complex2))
                                 
-                                    % Add the species with its associated Shinar-Feinberg pair to the list 'ACR_species'
-                                    ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i, 1)), ', R' num2str(SF_pair(i, 2)), ')]'];
+                                    % Add the species with its associated Shinar-Feinberg pair to the list ACR_species
+                                    ACR_species{end+1} = [model.species{SF_pair(i, 3)} ' [SF-pair (R' num2str(SF_pair(i, 1)) ', R' num2str(SF_pair(i, 2)) ') | deficiency ' num2str(delta1) ']'];
                                     
                                     % This is created so we can exit the iterated loops
                                     flag = 1;
@@ -626,25 +519,26 @@ function [model, R, F, ACR_species] = acr(model)
             end
       
         % Case 2: R is the union of span(B1) and span(B2)
-        % We jump to STEP 14 and continue up to STEP 17
+        % We jump to STEP 12 and continue up to STEP 15
         else
             
-            % STEP 14
-            [model_N1, delta1] = deficiency_N1(model, span_B1);
+            % STEP 12
+            [model_N1, delta1] = deficiency(model, span_B1);
             
-            % STEP 15
+            % STEP 13
             % Case 1: The deficiency is 0
             if delta1 == 0
                 
-                % STEP 16
-                is_RDK = is_PL_RDK(model_N1);
-                if is_RDK
+                % STEP 14
+                PL_RDK = is_PL_RDK(model_N1);
+                if PL_RDK
                     weakly_reversible = is_weakly_reversible(model_N1);
                     if weakly_reversible
-                        SF_pair_same_linkage_class = [ ];
-                        SF_pair_same_linkage_class = reaction_linkage_class(SF_pair1) == reaction_linkage_class(SF_pair2);
-                        if SF_pair_same_linkage_class == 1
-                            ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i, 1)), ', R' num2str(SF_pair(i, 2)), ')]'];
+                        reactant_complex1 = reactant_complex_list{SF_pair1};
+                        reactant_complex2 = reactant_complex_list{SF_pair2};
+                        same_linkage_class = in_same_linkage_class(model_N1, reactant_complex1, reactant_complex2);
+                        if same_linkage_class
+                            ACR_species{end+1} = [model.species{SF_pair(i, 3)} ' [SF-pair (R' num2str(SF_pair(i, 1)) ', R' num2str(SF_pair(i, 2)) ') | deficiency ' num2str(delta1) ']'];
                             % No break here since we don't want to exit checking the other pairs
                         end
                     end
@@ -653,11 +547,13 @@ function [model, R, F, ACR_species] = acr(model)
             % Case 2: The deficiency is 1
             elseif delta1 == 1
             
-                % STEP 17
-                is_RDK = is_PL_RDK(model_N1);
-                if is_RDK
-                    if (isempty(find(strcmp(G_digraph.vertices(nonterminal_complexes), reac_complex{SF_pair1}))) == 0 && isempty(find(strcmp(G_digraph.vertices(nonterminal_complexes), reac_complex{SF_pair2}))) == 0)
-                        ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i, 1)), ', R' num2str(SF_pair(i, 2)), ')]'];
+                % STEP 15
+                PL_RDK = is_PL_RDK(model_N1);
+                if PL_RDK
+                    reactant_complex1 = reactant_complex_list{SF_pair1};
+                    reactant_complex2 = reactant_complex_list{SF_pair2};
+                    if (is_nonterminal(model_N1, reactant_complex1) && is_nonterminal(model_N1, reactant_complex2))
+                        ACR_species{end+1} = [model.species{SF_pair(i, 3)} ' [SF-pair (R' num2str(SF_pair(i, 1)) ', R' num2str(SF_pair(i, 2)) ') | deficiency ' num2str(delta1) ']'];
                         % No break here since we don't want to exit checking the other pairs
                     end
                 end
@@ -665,31 +561,32 @@ function [model, R, F, ACR_species] = acr(model)
             % Case 3: The deficiency is greater than 1
             else
                 
-                % NOTE: This repeats STEPS 13-17 where we go through each set in the power set until we get a subnetwork with deficiency less than or equal to 1
-                % STEP 13
+                % NOTE: This repeats STEPS 11-15 where we go through each set in the power set until we get a subnetwork with deficiency less than or equal to 1
+                % STEP 11
                 for j = 1:numel(power_set_B2)
                     for k = 1:size(power_set_B2{j}, 1)
                         B1_new = [B1 power_set_B2{j}(k, :)];
                         B2_new = B2;
                         B2_new(ismember(B2_new, power_set_B2{j}(k, :))) = [ ];
-                        [binary_decomp, span_B1, span_B2] = R_in_span_union(B1_new, B2_new, R);
+                        [binary_decomp, span_B1, span_B2] = R_is_span_union(B1_new, B2_new, R);
                         if binary_decomp == 1
                             
-                            % STEP 14
-                            [model_N1, delta1] = deficiency_N1(model, span_B1);
+                            % STEP 12
+                            [model_N1, delta1] = deficiency(model, span_B1);
                             
-                            % STEP 15
+                            % STEP 13
                             if delta1 == 0
                                 
-                                % STEP 16
-                                is_RDK = is_PL_RDK(model_N1);
-                                if is_RDK
+                                % STEP 14
+                                PL_RDK = is_PL_RDK(model_N1);
+                                if PL_RDK
                                     weakly_reversible = is_weakly_reversible(model_N1);
                                     if weakly_reversible
-                                        SF_pair_same_linkage_class = [ ];
-                                        SF_pair_same_linkage_class = reaction_linkage_class(SF_pair1) == reaction_linkage_class(SF_pair2);
-                                        if SF_pair_same_linkage_class == 1
-                                            ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i, 1)), ', R' num2str(SF_pair(i, 2)), ')]'];
+                                        reactant_complex1 = reactant_complex_list{SF_pair1};
+                                        reactant_complex2 = reactant_complex_list{SF_pair2};
+                                        same_linkage_class = in_same_linkage_class(model_N1, reactant_complex1, reactant_complex2);
+                                        if same_linkage_class
+                                            ACR_species{end+1} = [model.species{SF_pair(i, 3)} ' [SF-pair (R' num2str(SF_pair(i, 1)) ', R' num2str(SF_pair(i, 2)) ') | deficiency ' num2str(delta1) ']'];
                                             flag = 1;
                                             break
                                         end
@@ -697,11 +594,13 @@ function [model, R, F, ACR_species] = acr(model)
                                 end
                             elseif delta1 == 1
                                 
-                                % STEP 17
-                                is_RDK = is_PL_RDK(model_N1);
-                                if is_RDK
-                                    if (isempty(find(strcmp(G_digraph.vertices(nonterminal_complexes), reac_complex{SF_pair1}))) == 0 && isempty(find(strcmp(G_digraph.vertices(nonterminal_complexes), reac_complex{SF_pair2}))) == 0)
-                                        ACR_species{end+1} = [model.species{SF_pair(i, 3)}, ' [from SF-pair (R', num2str(SF_pair(i, 1)), ', R' num2str(SF_pair(i, 2)), ')]'];
+                                % STEP 15
+                                PL_RDK = is_PL_RDK(model_N1);
+                                if PL_RDK
+                                    reactant_complex1 = reactant_complex_list{SF_pair1};
+                                    reactant_complex2 = reactant_complex_list{SF_pair2};
+                                    if (is_nonterminal(model_N1, reactant_complex1) && is_nonterminal(model_N1, reactant_complex2))
+                                        ACR_species{end+1} = [model.species{SF_pair(i, 3)} ' [SF-pair (R' num2str(SF_pair(i, 1)) ', R' num2str(SF_pair(i, 2)) ') | deficiency ' num2str(delta1) ']'];
                                         flag = 1;
                                         break
                                     end
@@ -724,7 +623,7 @@ function [model, R, F, ACR_species] = acr(model)
     
     
     %
-    % STEP 18: Display the results
+    % STEP 16: Display the results
     %
     
     % Case 1: No ACR in any species
