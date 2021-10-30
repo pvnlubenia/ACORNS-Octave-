@@ -51,7 +51,7 @@ acr uses the following functions:     1. add_edge
                     - SF_pair2: reaction number of the second reaction in an SF-pair
                     - R: matrix of reaction vectors of the CRN
                     - basis: basis for R
-                    - basis_reaction_num: reaction numbers of the reaction vectors that form the basis for R     6. in_same_linkage_class
+                    - basis_reac_num: reaction numbers of the reaction vectors that form the basis for R     6. in_same_linkage_class
           - OUTPUT: Returns a value of 1 if the complexes are in the same linkage class in 'model', 0 otherwise.
           - INPUTS:
                     - model: a structure representing the CRN (see details below; it is assumed that the field 'species' have already been filled out by another function)
